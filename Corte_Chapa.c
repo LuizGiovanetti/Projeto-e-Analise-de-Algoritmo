@@ -1,3 +1,5 @@
+//Esse mostra o tempo de execucao apos o processo do algoritmo
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
