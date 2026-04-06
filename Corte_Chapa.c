@@ -309,12 +309,17 @@ Resultado executar_algoritmo_guloso(int chapa_larg, int chapa_alt,
     Resultado res;
     int n_cantos = 0;
     int i, p;
-
+    int pot = 0;
+     
     int max_cortes = 0;
     int max_cantos_base = 0;
     for(i = 0; i < n_tipos; i++){
-        int pot = (chapa_larg / tipos[i].largura) * (chapa_alt / tipos[i].altura);
-        max_cortes += pot;
+        if(tipos[i].max_quantidade == 0){
+            pot = (chapa_larg / tipos[i].largura) * (chapa_alt / tipos[i].altura);
+            max_cortes += pot;
+        }else
+            max_cortes += tipos[i].altura*tipos[i].largura*tipos[i].max_quantidade;
+        
         if(pot > max_cantos_base)
             max_cantos_base = pot;
     }
