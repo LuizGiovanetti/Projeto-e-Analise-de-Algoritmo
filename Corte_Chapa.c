@@ -56,10 +56,9 @@ void liberar_resultado(Resultado *res);
 
 int main(void)
 {
-    int chapa_larg, chapa_alt;
-    int n_tipos;
-    TipoCorte *tipos;
-    int *ordem_prioridade;
+    int chapa_larg, chapa_alt, n_tipos, modo;
+    TipoCorte *tipos = NULL;
+    int *ordem_prioridade = NULL;
     Resultado resultado;
 
     clock_t inicio, fim;
@@ -195,6 +194,81 @@ int ler_prioridade(int n_tipos)
     return escolha;
 }
 
+int ler_instancia(const char *caminho, int *chapa_larg, int *chapa_alt 
+                    TipoCorte **tipos, int n_tipos)
+{
+    FILE *f = fopen(caminho, "r");
+    if(!f){
+        printf("[ERRO] Nao foi possivel abrir o arquivo: %s\n", caminho);
+        return 0;
+    }
+    
+    char linha[256];
+    int larg_lido = 0, alt_lido = 0, n_lido = 0, tipos_lidos = 0;
+    *tipos = NULL;
+    
+    while(fgets(linha, sizeof(linha), f)){
+        if((linha[0] == '#') || (linha[0] == '\n') || linha[0] == '\r')
+            continue
+        
+        char chave[64];
+        int valor;
+        
+        if(sscanf(linha, "%s %d", chave &valor) == 2){
+            if(strcmp(chave, "chapa_largura") == 0){
+                *chapa_larg = valor;
+                larg_lido = 1;
+            }elseif(strcmp(chave, "chapa_altura") == 0){
+                *chapa_alt = valor;
+                alt_lido = 1;
+            }elseif(strcmp(chave, "n_tipos") == 0){
+                *n_tipos = valor;
+                n_lidos = 1;
+                *tipos = (TipoCorte*)malloc(sizeof(TipoCorte)*valor);
+                
+                if(!*tipos){
+                    printf("[ERRO] Falha ao alocar memoria para tipos.\n");
+                    fclose(f);
+                    return 0;
+                }
+            }elseif(n_lido && (tipos_lidos < *n_tipos)){
+                int larg, alt, maxq;
+                if(sscanf(linha, "%d %d %d", &larg, &alt, &maxq) == 3){
+                    (*tipos)[tipos_lidos].largura = larg;
+                    (*tipos)[tipos_lidos].altura = alt;
+                    (*tipos)[tipos_lidos].max_quantidade = maxq;
+                    tipos_lidos++;
+                }
+            }
+        }elseif(n_lido && (tipos_lidos < *n_tipos)){
+            int larg, alt, maxq;
+            if(sscanf(linha, "%d %d %d", &larg, &alt, &maxq) == 3){
+                (*tipos)[tipos_lidos].largura = larg;
+                (*tipos)[tipos_lidos].altura = alt;
+                (*tipos)[tipos_lidos].max_quantidade = maxq;
+                tipos_lidos++;
+            }
+        }
+    }
+    
+    fclose(f);
+    if(!larg_lido || !alt_lido || !n_lido || (tipos_lidos < *n_tipos)){
+        printf("[ERRO] Arquivo de instancia incompleto ou com formato invalido.\n");
+        free(*tipos);
+        *tipos = NULL;
+        return 0;
+    }
+    
+    int i;
+    for(i = 0; i <*n_tipos; i++){
+        if(((*tipos)[i].largura > *chapa_larg) ||((*tipos)[i].altura > *chapa_larg)){
+            printf("[Aviso] Corte %d (%dx%d) nao cabe na chapa (%dx%d). Ignorado.\n",
+                   i+1, (*tipos)[i].largura, (*tipos)[i].altura, *chapa_larg, *chapa_alt);
+        }
+    }
+    return 1;
+}
+
 /*
  * Verifica se um novo retangulo se sobrepoe a algum corte já realizado
  * Retorna 1 se houver sobreposicao, 0 se estiver livre
@@ -309,17 +383,17 @@ Resultado executar_algoritmo_guloso(int chapa_larg, int chapa_alt,
     Resultado res;
     int n_cantos = 0;
     int i, p;
-    int pot = 0;
-     
+    
     int max_cortes = 0;
     int max_cantos_base = 0;
     for(i = 0; i < n_tipos; i++){
-        if(tipos[i].max_quantidade == 0){
-            pot = (chapa_larg / tipos[i].largura) * (chapa_alt / tipos[i].altura);
-            max_cortes += pot;
+        int pot = (chapa_larg / tipos[i].largura) * (chapa_alt / tipos[i].altura);
+    
+        if(tipos[i].max_quantidade > 0){
+            max_cortes += tipos[i].max_quantidade;
         }else
-            max_cortes += tipos[i].altura*tipos[i].largura*tipos[i].max_quantidade;
-        
+            max_cortes += pot;
+
         if(pot > max_cantos_base)
             max_cantos_base = pot;
     }
