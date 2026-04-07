@@ -100,7 +100,6 @@ static TipoCorte tipos_C41[] = {
     {11,10,1},{11, 5,1},{ 8, 8,1},{ 3, 8,1}
 };
 
-void carregar_instancias(Instancia *inst, int n);
 int verifica_sobreposicao(Retangulo *cortes, int n_cortes, Retangulo *novo);
 int cabe_na_chapa(Retangulo *novo, int chapa_larg, int chapa_alt);
 void adicionar_cantos(Canto *cantos, int *n_cantos, int max_cantos, Retangulo *corte);
@@ -203,11 +202,17 @@ void adicionar_cantos(Canto *cantos, int *n_cantos, int max_cantos, Retangulo *c
     int cx1 = corte->x, cy1 = corte->y + corte->altura;
     int cx2 = corte->x + corte->largura, cy2 = corte->y;
 
-    if(!canto_ja_existe(cantos, *n_cantos, cx1, cy1) && *n_cantos < max_cantos)
-        cantos[*n_cantos].x = cx1; cantos[*n_cantos].y = cy1; (*n_cantos)++;
-  
-    if(!canto_ja_existe(cantos, *n_cantos, cx2, cy2) && *n_cantos < max_cantos)
-        cantos[*n_cantos].x = cx2; cantos[*n_cantos].y = cy2; (*n_cantos)++;
+    if(!canto_ja_existe(cantos, *n_cantos, cx1, cy1) && *n_cantos < max_cantos){
+       cantos[*n_cantos].x = cx1; 
+       cantos[*n_cantos].y = cy1; 
+       (*n_cantos)++;
+    }
+    if(!canto_ja_existe(cantos, *n_cantos, cx2, cy2) && *n_cantos < max_cantos){
+       cantos[*n_cantos].x = cx2; 
+       cantos[*n_cantos].y = cy2; 
+       (*n_cantos)++;
+    }
+        
 }
 
 int canto_ja_existe(Canto *cantos, int n_cantos, int x, int y)
@@ -372,25 +377,26 @@ void exibir_resultado_instancia(Instancia *d, Resultado res, int *ordem_priorida
         int t = res.posicoes[i].tipo;
         char dim[16];
         sprintf(dim, "%dx%d", d->tipos[t].largura, d->tipos[t].altura);
-        printf("  %-6d %-12s %-10d %-10d\n",
-               i + 1, dim, res.posicoes[i].x, res.posicoes[i].y);
+        printf("  %-6d %-12s %-10d %-10d\n", i + 1, dim, res.posicoes[i].x, res.posicoes[i].y);
     }
 
     printf("\n------------------------------------------\n");
     printf("  Chapa          : %d x %d cm  (area: %d cm2)\n", d->chapa_larg, d->chapa_alt, d->area_chapa);
     printf("  Tipos definidos: %d\n", d->n_tipos);
-    printf("  Cortes feitos  : %d peca(s)\n", res.quantidade_cortes);
+    printf("  Cortes feitos  : %d peca(s)\n\n", res.quantidade_cortes);
 
     for(i = 0; i < d->n_tipos; i++){
       int pos_pri = -1;
-      for(p = 0; p < d->n_tipos; p++)
-        if(ordem_prioridade[p] - 1 == i) 
-        {
+      for(p = 0; p < d->n_tipos; p++){
+         if(ordem_prioridade[p] - 1 == i){
             pos_pri = p + 1; 
-          break; 
-        }
+            break; 
+         }
+         printf("  Tipo %d (%dx%d cm, prior.%d): %d peca(s)\n", i + 1, d->tipos[i].largura, d->tipos[i].altura, pos_pri, res.contagem_por_tipo[i]);
+      }
+        
 
-        printf("  Tipo %d (%dx%d cm, prior.%d): %d peca(s)\n", i + 1, d->tipos[i].largura, d->tipos[i].altura, pos_pri, res.contagem_por_tipo[i]);
+        
     }
 
     printf(" Area utilizada : %d cm2  (%.2f%%)\n", res.area_utilizada, pct_uso);
