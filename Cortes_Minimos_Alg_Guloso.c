@@ -102,8 +102,6 @@ static TipoCorte tipos_C41[] = {
 
 int verifica_sobreposicao(Retangulo *cortes, int n_cortes, Retangulo *novo);
 int cabe_na_chapa(Retangulo *novo, int chapa_larg, int chapa_alt);
-//int cmp_area_desc(const void *a, const void *b);
-//void ordenar_por_area_desc(TipoCorte *tipos, int n_tipos);
 void adicionar_cantos(Canto *cantos, int *n_cantos, int max_cantos, Retangulo *corte);
 int canto_ja_existe(Canto *cantos, int n_cantos, int x, int y);
 double calcular_grau_ocupacao(Canto c, int larg, int alt, Retangulo *cortes, int n_cortes, int chapa_larg, int chapa_alt);
@@ -137,8 +135,6 @@ int main(void)
         for (p = 0; p < d->n_tipos; p++)
             ordem_prioridade[p] = p + 1;
 
-        //ordenar_por_area_desc(d->tipos, d->n_tipos);
-
         printf("==========================================\n");
         printf(" Instancia: %s | Chapa: %dx%d cm | %d tipos\n", d->nome, d->chapa_larg, d->chapa_alt, d->n_tipos);
         printf("==========================================\n");
@@ -167,19 +163,6 @@ int main(void)
 
     return 0;
 }
-
-/*int cmp_area_desc(const void *a, const void *b)
-{
-    int area_a = ((TipoCorte *)a)->largura * ((TipoCorte *)a)->altura;
-    int area_b = ((TipoCorte *)b)->largura * ((TipoCorte *)b)->altura;
-    return area_b - area_a; 
-}
-
-void ordenar_por_area_desc(TipoCorte *tipos, int n_tipos)
-{
-    qsort(tipos, n_tipos, sizeof(TipoCorte), cmp_area_desc);
-}*/
-
 
 //Retorna 1 se houver sobreposicao, 0 se estiver livre 
 int verifica_sobreposicao(Retangulo *cortes, int n_cortes, Retangulo *novo)
@@ -237,10 +220,6 @@ int canto_ja_existe(Canto *cantos, int n_cantos, int x, int y)
             return 1;
     return 0;
 }
-
-/* -----------------------------------------------------------------------
- * HEURISTICA GULOSA: GRAU DE OCUPACAO
- * ----------------------------------------------------------------------- */
 
 /*
    Conta quantas bordas candidatas estao encostadas em paredes ou outros cortes
@@ -376,109 +355,7 @@ Resultado executar_algoritmo_guloso(int chapa_larg, int chapa_alt, TipoCorte *ti
     free(cantos);
     return res;
 }
-/*
-Resultado executar_algoritmo_guloso(int chapa_larg, int chapa_alt, TipoCorte *tipos, int n_tipos, int *ordem_prioridade)
-{
-    Resultado res;
-    int n_cantos = 0, i, p;
-   
-    //Calcula limites de alocacao dinamica 
-    int max_cortes = 0, max_cantos_base = 0;
-    for(i = 0; i < n_tipos; i++){
-        int pot = (chapa_larg / tipos[i].largura) * (chapa_alt / tipos[i].altura);
 
-        if(tipos[i].max_quantidade > 0)
-            max_cortes += tipos[i].max_quantidade;
-        else
-            max_cortes += pot;
-
-        if(pot > max_cantos_base)
-            max_cantos_base = pot;
-    }
-    int max_cantos = 2 * max_cantos_base + 4;
-
-    Canto *cantos = (Canto*)malloc(sizeof(Canto) * max_cantos);
-    res.posicoes = (Retangulo*)malloc(sizeof(Retangulo) * (max_cortes + 1));
-    res.contagem_por_tipo = (int*)malloc(sizeof(int) * n_tipos);
-    res.quantidade_cortes = 0;
-    res.area_utilizada = 0;
-
-    if(!cantos || !res.posicoes || !res.contagem_por_tipo){
-        printf("[ERRO] Falha ao alocar memoria.\n");
-        free(cantos); free(res.posicoes); free(res.contagem_por_tipo);
-        res.quantidade_cortes = 0; res.area_utilizada = 0;
-        res.area_sobra        = chapa_larg * chapa_alt;
-        return res;
-    }
-
-    for(i = 0; i < n_tipos; i++)
-        res.contagem_por_tipo[i] = 0;
-
-    cantos[0].x = 0; cantos[0].y = 0; n_cantos = 1;
-
-    while (n_cantos > 0){
-        int melhor_canto_idx = -1;
-        int melhor_tipo_idx = -1;
-        double melhor_grau = -1.0;
-
-        for(i = 0; i < n_cantos; i++){
-            for (p = 0; p < n_tipos; p++){
-                int t = ordem_prioridade[p] - 1;
-
-                //Verifica o limite maximo de cada tipo 
-                if(tipos[t].max_quantidade > 0 && res.contagem_por_tipo[t] >= tipos[t].max_quantidade)
-                    continue;
-
-                Retangulo candidato;
-                candidato.x = cantos[i].x;
-                candidato.y = cantos[i].y;
-                candidato.largura = tipos[t].largura;
-                candidato.altura = tipos[t].altura;
-                candidato.tipo = t;
-
-                if(!cabe_na_chapa(&candidato, chapa_larg, chapa_alt))
-                    continue;
-                if(verifica_sobreposicao(res.posicoes, res.quantidade_cortes, &candidato))
-                    continue;
-
-                double grau = calcular_grau_ocupacao(cantos[i], tipos[t].largura, tipos[t].altura, res.posicoes, res.quantidade_cortes, chapa_larg, chapa_alt);
-
-                //Substitui com grau maior
-                if(grau > melhor_grau){
-                    melhor_grau = grau;
-                    melhor_canto_idx = i;
-                    melhor_tipo_idx = p;
-                }
-            }
-        }
-
-        if(melhor_canto_idx == -1) 
-           break;
-
-        int t_escolhido = ordem_prioridade[melhor_tipo_idx] - 1;
-
-        Retangulo novo_corte;
-        novo_corte.x = cantos[melhor_canto_idx].x;
-        novo_corte.y = cantos[melhor_canto_idx].y;
-        novo_corte.largura = tipos[t_escolhido].largura;
-        novo_corte.altura = tipos[t_escolhido].altura;
-        novo_corte.tipo = t_escolhido;
-
-        res.posicoes[res.quantidade_cortes] = novo_corte;
-        res.quantidade_cortes++;
-        res.area_utilizada += novo_corte.largura * novo_corte.altura;
-        res.contagem_por_tipo[t_escolhido]++;
-
-        cantos[melhor_canto_idx] = cantos[n_cantos - 1];
-        n_cantos--;
-        adicionar_cantos(cantos, &n_cantos, max_cantos, &novo_corte);
-    }
-
-    res.area_sobra = (chapa_larg * chapa_alt) - res.area_utilizada;
-    free(cantos);
-    return res;
-}
-*/
 void exibir_resultado_instancia(Instancia *d, Resultado res, int *ordem_prioridade)
 {
     int i, p;
@@ -546,17 +423,6 @@ void exibir_tabela_comparativa(Instancia *inst, int n)
 
     printf("+-------+----------+--------+--------+-----------+-----------+----------+----------+--------------+--------------+\n");
 
-    printf("\nLegenda:\n");
-    printf("  Inst.        : nome da instancia do artigo\n");
-    printf("  Chapa        : dimensoes da chapa (LxA em cm)\n");
-    printf("  Pecas        : numero de tipos de corte definidos na instancia\n");
-    printf("  Nosso        : cortes efetivamente realizados pelo nosso algoritmo\n");
-    printf("  Area cm2     : area total da chapa\n");
-    printf("  Usada cm2    : area coberta pelos cortes\n");
-    printf("  Sobra%%Art   : %% sobra segundo o artigo (Pentium 4, 2.0GHz)\n");
-    printf("  Sobra%%Nos   : %% sobra do nosso algoritmo\n");
-    printf("  Tempo Art(s) : tempo CPU relatado no artigo\n");
-    printf("  Tempo Nos(s) : tempo CPU medido APENAS no algoritmo guloso\n");
 
     printf("\nAvaliacao:\n");
     for(i = 0; i < n; i++){
