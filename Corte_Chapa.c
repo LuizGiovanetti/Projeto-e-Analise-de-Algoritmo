@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
+//teste
 //Esse e a chapa, e faz com que ela atualize os valores conforme ocorre os cortes
 typedef struct{
     int x;        
