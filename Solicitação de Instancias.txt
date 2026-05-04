@@ -1,0 +1,81 @@
+Crie um arquivo .txt contendo 13 instâncias benchmark nomeadas de B01 até B13 para um algoritmo de corte bidimensional de chapas metálicas, seguindo exatamente o formato abaixo, para leitura direta em um algoritmo implementado em C.
+
+FORMATO OBRIGATÓRIO
+@INSTANCIA <nome> <largura_chapa> <altura_chapa>
+@ARTIGO 0 0.00 0.00
+@TIPOS <quantidade_tipos>
+<largura1> <altura1> <max_qtd>
+<largura2> <altura2> <max_qtd>
+...
+@PRIORIDADE 1 2 3 ... N
+---
+REGRAS OBRIGATÓRIAS
+Gerar apenas as instâncias B01 até B13
+Cada instância termina com ---
+Todos os tipos devem usar:
+max_qtd = 0
+Todas as dimensões devem ser números inteiros positivos.
+A linha @PRIORIDADE deve listar todos os índices de 1 até N, em ordem crescente.
+O arquivo final deve vir pronto para salvar como .txt
+Não incluir explicações extras.
+PADRÃO DAS INSTÂNCIAS B01 até B10
+
+Seguir exatamente esta progressão:
+
+Instância	Chapa	Tipos
+B01	150x150	15
+B02	200x200	20
+B03	250x250	25
+B04	300x300	30
+B05	350x350	35
+B06	400x400	40
+B07	450x450	45
+B08	500x500	50
+B09	550x550	55
+B10	600x600	60
+Regra:
+tamanho da chapa cresce de 50 em 50
+quantidade de tipos cresce de 5 em 5
+usar peças proporcionais ao tamanho da chapa
+misturar:
+quadrados
+retângulos horizontais
+retângulos verticais
+peças pequenas
+peças médias
+peças grandes
+QUEBRA DE PADRÃO NAS 3 ÚLTIMAS (grandes benchmarks)
+
+Usar exatamente:
+
+Instância	Chapa	Tipos
+B11	2500x2500	100
+B12	4500x4500	150
+B13	6000x6000	150
+
+Essas 3 últimas devem representar testes pesados de desempenho computacional.
+
+Usar peças coerentes com o tamanho gigante das chapas.
+
+OBJETIVO DOS DADOS
+
+As instâncias devem ser boas para testar:
+
+algoritmo guloso
+busca local por permutação
+busca local por rotação
+tempo de execução
+taxa de desperdício
+escalabilidade
+ALEATORIEDADE REPRODUTÍVEL
+
+Use geração pseudoaleatória controlada.
+
+SEED FIXA OBRIGATÓRIA
+SEED = 2026
+
+Isso significa que qualquer pessoa, em qualquer dispositivo, ao usar este mesmo prompt, deve receber exatamente as mesmas instâncias.
+
+SAÍDA FINAL
+
+Retorne somente o conteúdo completo do arquivo .txt, pronto para uso.
