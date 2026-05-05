@@ -1,8 +1,7 @@
-# Projeto-e-Analise-de-Algoritmo
-# Algoritmo Guloso com Busca Local para Corte de Chapas Metálicas
+# Algoritmo Guloso com Estratégia de Ocupação de Cantos e Busca Local para Minimização de Sobras no Corte de Chapas Metálicas. 
 
 Trabalho desenvolvido para a disciplina de Análise e Projeto de Algoritmos —
-Engenharia de Computação, UTFPR.
+Engenharia de Computação, UTFPR - Campus Pato Branco.
 
 ## Descrição
 
@@ -12,19 +11,19 @@ metálicas, com o objetivo de minimizar a área desperdiçada (trim loss).
 
 ## Algoritmos Implementados
 
-- **CorteNovo.c** — Algoritmo guloso baseado na estratégia de Ocupação de
+- **CorteChapaAlgGuloso.c** — Algoritmo guloso baseado na estratégia de Ocupação de
   Cantos (Corner-Occupying Action), conforme Chen e Huang (2007).
-- **CorteNovoBuscaLocalExaustiva.c** — Extensão por busca local com permutação
+- **CorteChapa_BL_Exaustiva.c** — Extensão por busca local com permutação
   da ordem de prioridade dos tipos de peças.
-- **CorteNovoBuscaLocalRotacao.c** — Extensão por busca local com rotação de
+- **CorteChapa_BL_Rotacao.c** — Extensão por busca local com rotação de
   peças não quadradas.
 
 ## Estrutura do Repositório
 
 ```
-├── CorteNovo.c
-├── CorteNovoBuscaLocalExaustiva.c
-├── CorteNovoBuscaLocalRotacao.c
+├── CorteChapaAlgGuloso.c
+├── CorteChapa_BL_Exaustiva.c
+├── CorteChapa_BL_Rotacao.c
 ├── LerCortes.py
 ├── instancias.txt
 └── prompt_instancias.txt
@@ -34,16 +33,16 @@ metálicas, com o objetivo de minimizar a área desperdiçada (trim loss).
 
 **Compilar:**
 ```bash
-gcc CorteNovo.c -o CorteNovo
-gcc CorteNovoBuscaLocalExaustiva.c -o CorteExaustiva
-gcc CorteNovoBuscaLocalRotacao.c -o CorteRotacao
+gcc CorteChapaAlgGuloso.c -o CorteChapaAlgGuloso.exe
+gcc CorteChapa_BL_Exaustiva.c -o CorteChapa_BL_Exaustiva.exe
+gcc CorteChapa_BL_Rotacao.c -o CorteChapa_BL_Rotacao.exe
 ```
 
 **Executar:**
 ```bash
-./CorteNovo
-./CorteExaustiva
-./CorteRotacao
+./CorteChapaAlgGuloso
+./CorteChapa_BL_Exaustiva
+./CorteChapa_BL_Rotacao
 ```
 
 Os algoritmos leem automaticamente o arquivo `instancias.txt` e geram o arquivo
@@ -54,7 +53,7 @@ Os algoritmos leem automaticamente o arquivo `instancias.txt` e geram o arquivo
 Após a execução, utilize o script Python para gerar os layouts graficamente:
 
 ```bash
-python LerCortes.py cortes_saida.txt
+python LerCortes.py 
 ```
 
 Será gerada uma imagem PNG para cada instância processada.
