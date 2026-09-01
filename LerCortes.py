@@ -9,8 +9,9 @@ de cortes de cada instancia usando matplotlib.
 - Sem numeracao nos cortes
 
 Uso:
-    python visualizar_cortes.py                    # le cortes_saida.txt
-    python visualizar_cortes.py outro_arquivo.txt  # le arquivo customizado
+    python visualizar_cortes.py                          # le cortes_saida.txt, unidade padrao
+    python visualizar_cortes.py outro_arquivo.txt         # le arquivo customizado
+    python visualizar_cortes.py cortes_saida.txt mm       # define a unidade de medida (ex: mm, m, px, un)
 
 Saida:
     Um arquivo PNG por instancia: corte_C11.png, corte_B01.png, etc.
@@ -21,6 +22,8 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+UNIDADE_PADRAO = 'un' # Unidade de medida usada nos rotulos dos eixos.
 
 
 def ler_arquivo_cortes(caminho):
@@ -60,13 +63,14 @@ def ler_arquivo_cortes(caminho):
     return instancias
 
 
-def plotar_instancia(inst, salvar=True, mostrar=True):
+def plotar_instancia(inst, unidade=UNIDADE_PADRAO, salvar=True, mostrar=True):
     nome   = inst['nome']
     larg   = inst['larg']
     alt    = inst['alt']
     cortes = inst['cortes']
+    
+    sufixo = f' ({unidade})' if unidade else ''
 
-    # proporcao da figura acompanha a proporcao da chapa
     escala = 6.0
     if larg >= alt:
         fig_w = escala
@@ -106,15 +110,15 @@ def plotar_instancia(inst, salvar=True, mostrar=True):
     ax.set_aspect('equal')
     ax.invert_yaxis()
 
-    ax.set_xlabel('Largura (cm)', fontsize=9)
-    ax.set_ylabel('Altura (cm)', fontsize=9)
+    ax.set_xlabel(f'Largura{sufixo}', fontsize=9)
+    ax.set_ylabel(f'Altura{sufixo}', fontsize=9)
 
     area_total = larg * alt
     area_usada = sum(w * h for _, _, w, h in cortes)
     pct_sobra  = (area_total - area_usada) / area_total * 100
 
     ax.set_title(
-        f'Instancia {nome}  |  Chapa {larg}x{alt} cm  |  '
+        f'Instancia {nome}  |  Chapa {larg}x{alt}{sufixo}  |  '
         f'{len(cortes)} cortes  |  Sobra {pct_sobra:.2f}%',
         fontsize=10, pad=8
     )
@@ -135,6 +139,7 @@ def plotar_instancia(inst, salvar=True, mostrar=True):
 
 def main():
     caminho = sys.argv[1] if len(sys.argv) > 1 else 'cortes_saida.txt'
+    unidade = sys.argv[2] if len(sys.argv) > 2 else UNIDADE_PADRAO
 
     if not os.path.isfile(caminho):
         print(f'[ERRO] Arquivo nao encontrado: {caminho}')
@@ -151,7 +156,7 @@ def main():
     for inst in instancias:
         print(f'  Plotando {inst["nome"]} ({inst["larg"]}x{inst["alt"]}, '
               f'{len(inst["cortes"])} cortes)...')
-        plotar_instancia(inst, salvar=True, mostrar=True)
+        plotar_instancia(inst, unidade=unidade, salvar=True, mostrar=True)
 
     print('Concluido.')
 
