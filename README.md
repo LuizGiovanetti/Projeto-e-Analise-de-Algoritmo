@@ -1,4 +1,4 @@
-# Algoritmo Guloso com Estratégia de Ocupação de Cantos, Buscas Locais e GRASP para Minimização de Sobras no Corte de Chapas Metálicas.
+# ALGORITMO GULOSO COM ESTRATÉGIA DE OCUPAÇÃO DE CANTOS, BUSCAS LOCAIS E GRASP PARA MINIMIZAÇÃO DE SOBRAS NO CORTE DE CHAPAS INDUSTRIAIS.
 
 Trabalho desenvolvido para a disciplina de Análise e Projeto de Algoritmos —
 Engenharia de Computação, UTFPR - Campus Pato Branco.
