@@ -51,7 +51,9 @@ typedef struct{
     int  chapa_larg, chapa_alt;
     int  n_tipos;
     TipoCorte *tipos;
-    int *prioridade; //vetor com a ordem de prioridade lida do arquivo
+    TipoCorte *tipos_backup;   
+    int *prioridade;
+    int *prioridade_backup;     
 
     //Resultados do artigo - 0 quando nao ha referencia
     int    n_pecas_artigo;
@@ -92,9 +94,9 @@ void restaurar_backups(Instancia *d);
 int main(int argc, char *argv[]){
     const char *arquivo = (argc >= 2) ? argv[1] : "instancias.txt";
     
-    int max_iteracoes = (argc >= 3) ? atoi(argv[2]) : 10; //10 iteracoes para n ser muito demorado, e nem tao pouco para ser apenas o guloso em si
-    double alfa = (argc >= 4) ? atof(argv[3]) : 0.3; //0,3 para n ser completamente o alg guloso, e nem muito aleatorio
-    unsigned int seed = (argc >= 5) ? (unsigned int)atoi(argv[4]) : 12345; //para pseudoaleatoriedade, garantir reprodutibilidade
+    int max_iteracoes = (argc >= 3) ? atoi(argv[2]) : 30;
+    double alfa = (argc >= 4) ? atof(argv[3]) : 0.2;
+    unsigned int seed = (argc >= 5) ? (unsigned int)atoi(argv[4]) : 12345;
 
     int n_instancias = 0;
     Instancia *instancias = ler_instancias(arquivo, &n_instancias);
@@ -155,7 +157,8 @@ int main(int argc, char *argv[]){
 }
 
 void copiar_tipos(TipoCorte *dest, TipoCorte *src, int n){
-    for(int i = 0; i < n; i++){
+    int i;
+    for(i = 0; i < n; i++){
         dest[i].largura = src[i].largura;
         dest[i].altura = src[i].altura;
         dest[i].max_quantidade = src[i].max_quantidade;
@@ -163,7 +166,8 @@ void copiar_tipos(TipoCorte *dest, TipoCorte *src, int n){
 }
 
 void copiar_prioridades(int *dest, int *src, int n){
-    for(int i = 0; i < n; i++)
+    int i;
+    for(i = 0; i < n; i++)
         dest[i] = src[i];
 }
 
@@ -184,11 +188,12 @@ void restaurar_backups(Instancia *d){
 }
 
 void salvar_cortes_txt(Instancia *d, Resultado res, FILE *f_saida){
+    int i;
     //cabecalho da instancia: nome e dimensoes da chapa 
     fprintf(f_saida, "INSTANCIA %s %d %d\n", d->nome, d->chapa_larg, d->chapa_alt);
  
     //uma linha por corte realizado: canto inf-esq e dimensoes
-    for(int i = 0; i < res.quantidade_cortes; i++){
+    for(i = 0; i < res.quantidade_cortes; i++){
         Retangulo *r = &res.posicoes[i];
         fprintf(f_saida, "CORTE %d %d %d %d\n",
                 r->x, r->y, r->largura, r->altura);
@@ -207,7 +212,7 @@ static char *ler_linha_dinamica(FILE *f){
  
     int c;
     while((c = fgetc(f)) != EOF){
-        if((len + 1) >= cap){           //sem espaco: dobra o buffer
+        if((len + 1) >= cap){
             cap *= 2;
             char *tmp = (char*)realloc(buf, cap);
             if(!tmp){
@@ -217,9 +222,9 @@ static char *ler_linha_dinamica(FILE *f){
             buf = tmp;
         }
         if(c == '\n') 
-            break;           //fim da linha Unix/Windows 
+            break;
         if(c == '\r') 
-            continue;        //*descarta CR do Windows  
+            continue;
         buf[len++] = (char)c;
     }
  
@@ -240,7 +245,6 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
         return NULL;
     }
  
-    //conta instancias pelo numero de ---
     int cap = 0;
     char *linha;
     while((linha = ler_linha_dinamica(f)) != NULL){
@@ -262,9 +266,8 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
         return NULL;
     }
  
-    //preenche
     rewind(f);
-    int idx = -1;        //indice da instancia atual, incrementado em cada ---
+    int idx = -1;
     int tipos_lidos = 0;
  
     while((linha = ler_linha_dinamica(f)) != NULL){
@@ -274,39 +277,36 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
             continue;
         }
  
-        // ---  encerra a instancia em construcao
-        if(strncmp(linha, "---", 3) == 0)
-        {
+        if(strncmp(linha, "---", 3) == 0){
             idx++;
             tipos_lidos = 0;
             free(linha); continue;
         }
  
-        int prox = idx + 1; //monta a instancia
+        int prox = idx + 1;
         if(prox >= cap){
             free(linha); 
             continue;
         }
  
-        // @INSTANCIA <nome> <larg> <alt>
         if(strncmp(linha, "@INSTANCIA", 10) == 0){
             sscanf(linha + 10, " %31s %d %d", vetor[prox].nome, &vetor[prox].chapa_larg, &vetor[prox].chapa_alt);
             free(linha); 
             continue;
         }
  
-        // @ARTIGO <n_pecas> <sobra%> <tempo_s>
         if(strncmp(linha, "@ARTIGO", 7) == 0){
             sscanf(linha + 7, " %d %lf %lf", &vetor[prox].n_pecas_artigo, &vetor[prox].sobra_artigo, &vetor[prox].tempo_artigo);
             free(linha); continue;
         }
  
-        // @TIPOS <n> : aloca tipos e prioridade 
         if(strncmp(linha, "@TIPOS", 6) == 0){
             sscanf(linha + 6, " %d", &vetor[prox].n_tipos);
  
             vetor[prox].tipos = (TipoCorte*)malloc(sizeof(TipoCorte) * vetor[prox].n_tipos);
             vetor[prox].prioridade = (int*)malloc(sizeof(int) * vetor[prox].n_tipos);
+            vetor[prox].tipos_backup = NULL;
+            vetor[prox].prioridade_backup = NULL;
  
             if(!vetor[prox].tipos || !vetor[prox].prioridade){
                 fprintf(stderr, "[ERRO] Falha ao alocar instancia %d.\n", prox);
@@ -317,7 +317,6 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
                 return NULL;
             }
  
-            //Prioridade padrao sequencial, substitui se @PRIORIDADE aparecer
             int k;
             for(k = 0; k < vetor[prox].n_tipos; k++)
                 vetor[prox].prioridade[k] = k + 1;
@@ -326,7 +325,6 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
             free(linha); continue;
         }
  
-        //@PRIORIDADE <p1> <p2> ... <pN>
         if(strncmp(linha, "@PRIORIDADE", 11) == 0){
             char *ptr = linha + 11;
             int k;
@@ -346,7 +344,6 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
             continue;
         }
  
-        //Linha de tipo: <largura> <altura> <max_qtd> 
         if(vetor[prox].tipos && (tipos_lidos < vetor[prox].n_tipos)){
             TipoCorte *t = &vetor[prox].tipos[tipos_lidos];
 
@@ -362,7 +359,8 @@ Instancia *ler_instancias(const char *caminho, int *n_instancias){
 }
 
 void liberar_instancias(Instancia *inst, int n){
-    for(int i = 0; i < n; i++){
+    int i;
+    for(i = 0; i < n; i++){
         free(inst[i].tipos);
         free(inst[i].prioridade);
 
@@ -376,7 +374,8 @@ void liberar_instancias(Instancia *inst, int n){
 }
 
 int verifica_sobreposicao(Retangulo *cortes, int n_cortes, Retangulo *novo){
-    for(int i = 0; i < n_cortes; i++){
+    int i;
+    for(i = 0; i < n_cortes; i++){
         int sep_esq = (novo->x + novo->largura) <= cortes[i].x;
         int sep_dir = novo->x >= (cortes[i].x + cortes[i].largura);
         int sep_baixo = (novo->y + novo->altura) <= cortes[i].y;
@@ -391,8 +390,6 @@ int verifica_sobreposicao(Retangulo *cortes, int n_cortes, Retangulo *novo){
 int cabe_na_chapa(Retangulo *novo, int chapa_larg, int chapa_alt){
     return(novo->x >= 0) && (novo->y >= 0) && (novo->x + novo->largura <= chapa_larg) && (novo->y + novo->altura <= chapa_alt);
 }
-
-//depois de posicionar um corte, surgem dois novos cantos: (x, y + altura)-> canto acima E (x + largura, y)-> canto a direita
 
 void adicionar_cantos(Canto *cantos, int *n_cantos, int max_cantos, Retangulo *corte){
     int cx1 = corte->x, cy1 = corte->y + corte->altura;
@@ -411,13 +408,12 @@ void adicionar_cantos(Canto *cantos, int *n_cantos, int max_cantos, Retangulo *c
 }
 
 int canto_ja_existe(Canto *cantos, int n_cantos, int x, int y){
-    for(int i = 0; i < n_cantos; i++)
+    int i;
+    for(i = 0; i < n_cantos; i++)
         if((cantos[i].x == x) && (cantos[i].y == y))
             return 1;
     return 0;
 }
-
-//verifica qual o tipo de corte que encosta em mais bordas. Qual tiver maior valor quer dizer que e a melhor escolha gulosa, pois e mais justo
 
 double calcular_grau_ocupacao(Canto c, int larg, int alt, Retangulo *cortes, int n_cortes, int chapa_larg, int chapa_alt){
     int bordas = 0, i;
@@ -562,7 +558,7 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
     int max_cortes = 0, max_cantos_base = 0;
     for(i = 0; i < n_tipos; i++){
         int pot = (chapa_larg / tipos[i].largura) * (chapa_alt / tipos[i].altura);
-        max_cortes += (tipos[i].max_quantidade > 0) ? tipos[i].max_quantidade : pot; //usa o maximo de corte, se tiver; se nao usa a capacidade maxima teorica
+        max_cortes += (tipos[i].max_quantidade > 0) ? tipos[i].max_quantidade : pot;
 
         if(pot > max_cantos_base) 
             max_cantos_base = pot;
@@ -578,8 +574,9 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
     res.area_utilizada = 0;
 
     if(!cantos || !res.posicoes || !res.contagem_por_tipo){
-        printf("[ERRO] Falha ao alocar memoria.\n");
-        free(cantos); free(res.posicoes); free(res.contagem_por_tipo);
+        free(cantos); 
+        free(res.posicoes); 
+        free(res.contagem_por_tipo);
 
         res.quantidade_cortes = 0;
         res.area_utilizada = 0;
@@ -594,11 +591,29 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
     cantos[0].y = 0; 
     n_cantos = 1;
 
-    while(n_cantos > 0){
-        int *canto_indices = (int*)malloc(sizeof(int) * n_cantos * n_tipos);
-        int *tipo_indices = (int*)malloc(sizeof(int) * n_cantos * n_tipos);
-        double *graus = (double*)malloc(sizeof(double) * n_cantos * n_tipos);
+    int max_candidatos = n_cantos * n_tipos + 10;
+    int *canto_indices = (int*)malloc(sizeof(int) * max_candidatos);
+    int *tipo_indices = (int*)malloc(sizeof(int) * max_candidatos);
+    double *graus = (double*)malloc(sizeof(double) * max_candidatos);
+    int *rcl_indices = (int*)malloc(sizeof(int) * max_candidatos);
 
+    if(!canto_indices || !tipo_indices || !graus || !rcl_indices){
+        free(cantos);
+        free(res.posicoes);
+        free(res.contagem_por_tipo);
+        free(canto_indices);
+        free(tipo_indices);
+        free(graus);
+        free(rcl_indices);
+
+        res.quantidade_cortes = 0;
+        res.area_utilizada = 0;
+        res.area_sobra = chapa_larg * chapa_alt;
+
+        return res;
+    }
+
+    while(n_cantos > 0){
         int n_candidatos = 0;
         double melhor_grau = -1000000000.0;
 
@@ -623,6 +638,31 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
                     continue;
 
                 double grau = calcular_grau_ocupacao(cantos[i], tipos[t].largura, tipos[t].altura, res.posicoes, res.quantidade_cortes, chapa_larg, chapa_alt);
+                
+                if(n_candidatos >= max_candidatos){
+                    max_candidatos *= 2;
+                    canto_indices = (int*)realloc(canto_indices, sizeof(int) * max_candidatos);
+                    tipo_indices = (int*)realloc(tipo_indices, sizeof(int) * max_candidatos);
+                    graus = (double*)realloc(graus, sizeof(double) * max_candidatos);
+                    rcl_indices = (int*)realloc(rcl_indices, sizeof(int) * max_candidatos);
+                    
+                    if(!canto_indices || !tipo_indices || !graus || !rcl_indices){
+                        free(cantos);
+                        free(res.posicoes);
+                        free(res.contagem_por_tipo);
+                        free(canto_indices);
+                        free(tipo_indices);
+                        free(graus);
+                        free(rcl_indices);
+
+                        res.quantidade_cortes = 0;
+                        res.area_utilizada = 0;
+                        res.area_sobra = chapa_larg * chapa_alt;
+
+                        return res;
+                    }
+                }
+                
                 canto_indices[n_candidatos] = i;
                 tipo_indices[n_candidatos] = p;
                 graus[n_candidatos] = grau;
@@ -634,17 +674,11 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
             }
         }
 
-        if(n_candidatos == 0){
-            free(canto_indices); 
-            free(tipo_indices); 
-            free(graus);
+        if(n_candidatos == 0)
             break;
-        }
 
-        //Contrucao da RCL 
         double limiar = melhor_grau - alfa * (melhor_grau - 1.0);
         
-        int *rcl_indices = (int*)malloc(sizeof(int) * n_candidatos);
         int n_rcl = 0;
 
         for(i = 0; i < n_candidatos; i++){
@@ -654,7 +688,6 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
             }
         }
 
-        //escolha pseudoaleatoria da RCL 
         int escolha = *seed % n_rcl;
         *seed = *seed * 1103515245 + 12345;
 
@@ -677,15 +710,16 @@ Resultado construir_solucao_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipo
         cantos[canto_escolhido] = cantos[n_cantos - 1];
         n_cantos--;
         adicionar_cantos(cantos, &n_cantos, max_cantos, &novo_corte);
-
-        free(canto_indices); 
-        free(tipo_indices); 
-        free(graus); 
-        free(rcl_indices);
     }
 
     res.area_sobra = (chapa_larg * chapa_alt) - res.area_utilizada;
+
     free(cantos);
+    free(canto_indices);
+    free(tipo_indices);
+    free(graus);
+    free(rcl_indices);
+
     return res;
 }
 
@@ -695,15 +729,15 @@ void busca_local_troca_prioridades(Instancia *d, int *prioridade, Resultado *mel
     while(melhorou){
         melhorou = 0;
         
-        for(int i = 0; i < d->n_tipos - 1; i++){
+        int i, j;
+        for(i = 0; i < d->n_tipos - 1; i++){
             if(d->tipos[i].max_quantidade != 0) 
                 continue;
             
-            for(int j = i + 1; j < d->n_tipos; j++){
+            for(j = i + 1; j < d->n_tipos; j++){
                 if(d->tipos[j].max_quantidade != 0) 
                     continue;
                 
-                // troca
                 int tmp = prioridade[i];
                 prioridade[i] = prioridade[j];
                 prioridade[j] = tmp;
@@ -711,15 +745,26 @@ void busca_local_troca_prioridades(Instancia *d, int *prioridade, Resultado *mel
                 Resultado novo = executar_algoritmo_guloso(d->chapa_larg, d->chapa_alt, d->tipos, d->n_tipos, prioridade);
                 
                 if(novo.area_sobra < melhor->area_sobra){
-                    liberar_resultado(melhor);
+                    if(melhor->posicoes){
+                        free(melhor->posicoes);
+                        melhor->posicoes = NULL;
+                    }
+                    if(melhor->contagem_por_tipo){
+                        free(melhor->contagem_por_tipo);
+                        melhor->contagem_por_tipo = NULL;
+                    }
+
                     *melhor = novo;
-                    melhorou = 1;  //achou melhora, continua
+                    melhorou = 1;
                 }else{
-                    // desfaz
                     tmp = prioridade[i];
                     prioridade[i] = prioridade[j];
                     prioridade[j] = tmp;
-                    liberar_resultado(&novo);
+
+                    if(novo.posicoes)
+                        free(novo.posicoes);
+                    if(novo.contagem_por_tipo)
+                        free(novo.contagem_por_tipo);
                 }
             }
         }
@@ -732,8 +777,9 @@ void busca_local_rotacao(Instancia *d, int *prioridade, Resultado *melhor){
     while(melhorou){
         melhorou = 0;
 
-        for(int i = 0; i < d->n_tipos; i++){
-            if (d->tipos[i].largura == d->tipos[i].altura) //verifica se nao e quadrado
+        int i;
+        for(i = 0; i < d->n_tipos; i++){
+            if (d->tipos[i].largura == d->tipos[i].altura)
                 continue;
 
             int tmp = d->tipos[i].largura;
@@ -743,15 +789,26 @@ void busca_local_rotacao(Instancia *d, int *prioridade, Resultado *melhor){
             Resultado novo = executar_algoritmo_guloso(d->chapa_larg, d->chapa_alt, d->tipos, d->n_tipos, prioridade);
 
             if(novo.area_sobra < melhor->area_sobra){
-                liberar_resultado(melhor);
+                if(melhor->posicoes){
+                    free(melhor->posicoes);
+                    melhor->posicoes = NULL;
+                }
+                if(melhor->contagem_por_tipo){
+                    free(melhor->contagem_por_tipo);
+                    melhor->contagem_por_tipo = NULL;
+                }
+
                 *melhor  = novo;
-                melhorou = 1;   //achou melhora, continua
+                melhorou = 1;
             }else{
-                //desfaz a rotacao
                 tmp = d->tipos[i].largura;
                 d->tipos[i].largura = d->tipos[i].altura;
                 d->tipos[i].altura  = tmp;
-                liberar_resultado(&novo);
+                
+                if(novo.posicoes)
+                        free(novo.posicoes);
+                    if(novo.contagem_por_tipo)
+                        free(novo.contagem_por_tipo);
             }
         }
     }
@@ -759,17 +816,22 @@ void busca_local_rotacao(Instancia *d, int *prioridade, Resultado *melhor){
 
 
 Resultado executar_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipos, int n_tipos, int *prioridade, int max_iteracoes, double alfa, unsigned int seed){
-    //inicia melhor solucao (vazia)
     Resultado melhor;
-    melhor.quantidade_cortes = 0;
-    melhor.area_utilizada = 0;
+    memset(&melhor, 0, sizeof(Resultado));
     melhor.area_sobra = chapa_larg * chapa_alt;
     melhor.posicoes = NULL;
     melhor.contagem_por_tipo = NULL;
 
-    //os backups servem para manter os tipos e prioridades originais, pq o GRASP vai alterar eles durante a execucao
     TipoCorte *tipos_backup = (TipoCorte*)malloc(sizeof(TipoCorte) * n_tipos);
     int *prioridade_backup = (int*)malloc(sizeof(int) * n_tipos);
+
+    if(!tipos_backup || !prioridade_backup){
+        free(tipos_backup);
+        free(prioridade_backup);
+
+        return melhor;
+    }
+
     copiar_tipos(tipos_backup, tipos, n_tipos);
     copiar_prioridades(prioridade_backup, prioridade, n_tipos);
 
@@ -782,7 +844,10 @@ Resultado executar_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipos, int n_
         Resultado solucao = construir_solucao_grasp(chapa_larg, chapa_alt, tipos, n_tipos, prioridade, alfa, &seed_iter);
 
         if(solucao.quantidade_cortes == 0){
-            liberar_resultado(&solucao);
+            if(solucao.posicoes) 
+                free(solucao.posicoes);
+            if(solucao.contagem_por_tipo) 
+                free(solucao.contagem_por_tipo);
             continue;
         }
 
@@ -790,10 +855,22 @@ Resultado executar_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipos, int n_
             melhor = solucao;
         else{
             if(solucao.area_sobra < melhor.area_sobra){
-                liberar_resultado(&melhor);
+                if(melhor.posicoes){
+                    free(melhor.posicoes);
+                    melhor.posicoes = NULL;
+                }
+                if(melhor.contagem_por_tipo){
+                    free(melhor.contagem_por_tipo);
+                    melhor.contagem_por_tipo = NULL;
+                }
+                
                 melhor = solucao;
-            }else
-                liberar_resultado(&solucao);
+            }else{
+                if(solucao.posicoes) 
+                    free(solucao.posicoes);
+                if(solucao.contagem_por_tipo) 
+                    free(solucao.contagem_por_tipo);
+            }
         }
 
         copiar_tipos(tipos, tipos_backup, n_tipos);
@@ -812,6 +889,7 @@ Resultado executar_grasp(int chapa_larg, int chapa_alt, TipoCorte *tipos, int n_
 
     copiar_tipos(tipos, tipos_backup, n_tipos);
     copiar_prioridades(prioridade, prioridade_backup, n_tipos);
+
     free(tipos_backup);
     free(prioridade_backup);
 
